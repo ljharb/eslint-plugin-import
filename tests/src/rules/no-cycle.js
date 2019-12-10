@@ -11,7 +11,6 @@ const test = def => _test(Object.assign(def, {
   filename: testFilePath('./cycles/depth-zero.js'),
 }))
 
-// describe.only("no-cycle", () => {
 ruleTester.run('no-cycle', rule, {
   valid: [
     // this rule doesn't care if the cycle length is 0
@@ -129,6 +128,11 @@ ruleTester.run('no-cycle', rule, {
       parser: require.resolve('babel-eslint'),
       errors: [error(`Dependency cycle via ./flow-types-depth-two:4=>./depth-one:1`)],
     }),
+    _test({
+      code: 'import "app"',
+      parser: require.resolve('babel-eslint'),
+      errors: [error(`Dependency cycle via `)],
+      filename: testFilePath('./cycles/alias/index.js'),
+    }),
   ],
 })
-// })
