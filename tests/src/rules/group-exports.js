@@ -1,142 +1,178 @@
 import { test } from '../utils';
+import parsers from '../parsers';
+
 import { RuleTester } from 'eslint';
 import rule from 'rules/group-exports';
-import { resolve } from 'path';
-import { default as babelPresetFlow } from 'babel-preset-flow';
 
-/* eslint-disable max-len */
 const errors = {
   named: 'Multiple named export declarations; consolidate all named exports into a single export declaration',
   commonjs: 'Multiple CommonJS exports; consolidate all exports into a single assignment to `module.exports`',
 };
-/* eslint-enable max-len */
-const ruleTester = new RuleTester({
-  parser: resolve(__dirname, '../../../node_modules/babel-eslint'),
-  parserOptions: {
-    babelOptions: {
-      configFile: false,
-      babelrc: false,
-      presets: [babelPresetFlow],
-    },
-  },
-});
+const ruleTester = new RuleTester();
 
 ruleTester.run('group-exports', rule, {
-  valid: [
+  valid: parsers.all([].concat(
     test({ code: 'export const test = true' }),
-    test({ code: `
-      export default {}
-      export const test = true
-    ` }),
-    test({ code: `
-      const first = true
-      const second = true
-      export {
-        first,
-        second
-      }
-    ` }),
-    test({ code: `
-      export default {}
-      /* test */
-      export const test = true
-    ` }),
-    test({ code: `
-      export default {}
-      // test
-      export const test = true
-    ` }),
-    test({ code: `
-      export const test = true
-      /* test */
-      export default {}
-    ` }),
-    test({ code: `
-      export const test = true
-      // test
-      export default {}
-    ` }),
-    test({ code: `
-      export { default as module1 } from './module-1'
-      export { default as module2 } from './module-2'
-    ` }),
+    test({
+      code: `
+        export default {}
+        export const test = true
+      `,
+    }),
+    test({
+      code: `
+        const first = true
+        const second = true
+        export {
+          first,
+          second
+        }
+      `,
+    }),
+    test({
+      code: `
+        export default {}
+        /* test */
+        export const test = true
+      `,
+    }),
+    test({
+      code: `
+        export default {}
+        // test
+        export const test = true
+      `,
+    }),
+    test({
+      code: `
+        export const test = true
+        /* test */
+        export default {}
+      `,
+    }),
+    test({
+      code: `
+        export const test = true
+        // test
+        export default {}
+      `,
+    }),
+    test({
+      code: `
+        export { default as module1 } from './module-1'
+        export { default as module2 } from './module-2'
+      `,
+    }),
     test({ code: 'module.exports = {} ' }),
-    test({ code: `
-      module.exports = { test: true,
-        another: false }
-    ` }),
+    test({
+      code: `
+        module.exports = { test: true,
+          another: false }
+      `,
+    }),
     test({ code: 'exports.test = true' }),
 
-    test({ code: `
-      module.exports = {}
-      const test = module.exports
-    ` }),
-    test({ code: `
-      exports.test = true
-      const test = exports.test
-    ` }),
-    test({ code: `
-      module.exports = {}
-      module.exports.too.deep = true
-    ` }),
-    test({ code: `
-      module.exports.deep.first = true
-      module.exports.deep.second = true
-    ` }),
-    test({ code: `
-      module.exports = {}
-      exports.too.deep = true
-    ` }),
-    test({ code: `
-      export default {}
-      const test = true
-      export { test }
-    ` }),
-    test({ code: `
-      const test = true
-      export { test }
-      const another = true
-      export default {}
-    ` }),
-    test({ code: `
-      module.something.else = true
-      module.something.different = true
-    ` }),
-    test({ code: `
-      module.exports.test = true
-      module.something.different = true
-    ` }),
-    test({ code: `
-      exports.test = true
-      module.something.different = true
-    ` }),
-    test({ code: `
-      unrelated = 'assignment'
-      module.exports.test = true
-    ` }),
-    test({ code: `
-      type firstType = {
-        propType: string
-      };
-      const first = {};
-      export type { firstType };
-      export { first };
-    ` }),
-    test({ code: `
-      type firstType = {
-        propType: string
-      };
-      type secondType = {
-        propType: string
-      };
-      export type { firstType, secondType };
-    ` }),
-    test({ code: `
-      export type { type1A, type1B } from './module-1'
-      export { method1 } from './module-1'
-    ` }),
-  ],
-  invalid: [
+    test({
+      code: `
+        module.exports = {}
+        const test = module.exports
+      `,
+    }),
+    test({
+      code: `
+        exports.test = true
+        const test = exports.test
+      `,
+    }),
+    test({
+      code: `
+        module.exports = {}
+        module.exports.too.deep = true
+      `,
+    }),
+    test({
+      code: `
+        module.exports.deep.first = true
+        module.exports.deep.second = true
+      `,
+    }),
+    test({
+      code: `
+        module.exports = {}
+        exports.too.deep = true
+      `,
+    }),
+    test({
+      code: `
+        export default {}
+        const test = true
+        export { test }
+      `,
+    }),
+    test({ 
+      code: `
+        const test = true
+        export { test }
+        const another = true
+        export default {}
+      `,
+    }),
+    test({
+      code: `
+        module.something.else = true
+        module.something.different = true
+      `,
+    }),
+    test({
+      code: `
+        module.exports.test = true
+        module.something.different = true
+      `,
+    }),
+    test({
+      code: `
+        exports.test = true
+        module.something.different = true
+      `,
+    }),
+    test({
+      code: `
+        unrelated = 'assignment'
+        module.exports.test = true
+      `,
+    }),
+    test({
+      code: `
+        type firstType = {
+          propType: string
+        };
+        const first = {};
+        export type { firstType };
+        export { first };
+      `,
+      features: ['flow'],
+    }),
+    test({
+      code: `
+        type firstType = {
+          propType: string
+        };
+        type secondType = {
+          propType: string
+        };
+        export type { firstType, secondType };
+      `,
+      features: ['types'],
+    }),
+    test({
+      code: `
+        export type { type1A, type1B } from './module-1'
+        export { method1 } from './module-1'
+      `,
+      features: ['flow'],
+    }),
+  )),
+  invalid: parsers.all([].concat(
     test({
       code: `
         export const test = true
@@ -276,6 +312,7 @@ ruleTester.run('group-exports', rule, {
         export type { secondType };
         export { first };
       `,
+      features: ['flow'],
       errors: [
         errors.named,
         errors.named,
@@ -286,10 +323,11 @@ ruleTester.run('group-exports', rule, {
         export type { type1 } from './module-1'
         export type { type2 } from './module-1'
       `,
+      features: ['types'],
       errors: [
         errors.named,
         errors.named,
       ],
     }),
-  ],
+  )),
 });

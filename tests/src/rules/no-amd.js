@@ -2,12 +2,14 @@ import { RuleTester } from 'eslint';
 import eslintPkg from 'eslint/package.json';
 import semver from 'semver';
 
+import parsers from '../parsers';
+
 const ruleTester = new RuleTester({ parserOptions: { ecmaVersion: 2015, sourceType: 'module' } });
 
 ruleTester.run('no-amd', require('rules/no-amd'), {
-  valid: [
-    { code: 'import "x";', parserOptions: { ecmaVersion: 2015, sourceType: 'module' } },
-    { code: 'import x from "x"', parserOptions: { ecmaVersion: 2015, sourceType: 'module' } },
+  valid: parsers.all([].concat(
+    { code: 'import "x";' },
+    { code: 'import x from "x"' },
     'var x = require("x")',
 
     'require("x")',
@@ -25,13 +27,26 @@ ruleTester.run('no-amd', require('rules/no-amd'), {
     // unmatched arg types/number
     'define(0, 1, 2)',
     'define("a")',
-  ],
+  )),
 
-  invalid: semver.satisfies(eslintPkg.version, '< 4.0.0') ? [] : [
-    { code: 'define([], function() {})', errors: [ { message: 'Expected imports instead of AMD define().' }] },
-    { code: 'define(["a"], function(a) { console.log(a); })', errors: [ { message: 'Expected imports instead of AMD define().' }] },
-
-    { code: 'require([], function() {})', errors: [ { message: 'Expected imports instead of AMD require().' }] },
-    { code: 'require(["a"], function(a) { console.log(a); })', errors: [ { message: 'Expected imports instead of AMD require().' }] },
-  ],
+  invalid: parsers.all([].concat(
+    semver.satisfies(eslintPkg.version, '>= 4') ? [
+      {
+        code: 'define([], function() {})',
+        errors: [{ message: 'Expected imports instead of AMD define().' }],
+      },
+      {
+        code: 'define(["a"], function(a) { console.log(a); })',
+        errors: [{ message: 'Expected imports instead of AMD define().' }],
+      },
+      {
+        code: 'require([], function() {})',
+        errors: [{ message: 'Expected imports instead of AMD require().' }],
+      },
+      {
+        code: 'require(["a"], function(a) { console.log(a); })',
+        errors: [{ message: 'Expected imports instead of AMD require().' }],
+      },
+    ] : [],
+  )),
 });

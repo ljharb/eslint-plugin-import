@@ -67,7 +67,10 @@ export const SYNTAX_CASES = [
   test({ code: 'for (let [ foo, bar ] of baz) {}' }),
 
   test({ code: 'const { x, y } = bar' }),
-  test({ code: 'const { x, y, ...z } = bar', parser: parsers.BABEL_OLD }),
+  test({
+    code: 'const { x, y, ...z } = bar',
+    parser: parsers.BABEL_OLD,
+  }),
 
   // all the exports
   test({ code: 'let x; export { x }' }),
@@ -120,5 +123,4 @@ export const SYNTAX_CASES = [
   test({
     code: 'import { foo } from "./ignore.invalid.extension"',
   }),
-
 ];

@@ -1,4 +1,5 @@
 import { parsers, test, testVersion } from '../utils';
+// import parsers from '../parsers';
 
 import { RuleTester } from 'eslint';
 import flatMap from 'array.prototype.flatmap';

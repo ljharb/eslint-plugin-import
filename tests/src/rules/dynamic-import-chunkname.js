@@ -1,4 +1,5 @@
-import { SYNTAX_CASES, getTSParsers, parsers } from '../utils';
+import { SYNTAX_CASES, getTSParsers, parsers as p } from '../utils';
+import parsers from '../parsers';
 import { RuleTester } from 'eslint';
 import semver from 'semver';
 
@@ -15,7 +16,6 @@ const pickyCommentOptions = [{
 const multipleImportFunctionOptions = [{
   importFunctions: ['dynamicImport', 'definitelyNotStaticImport'],
 }];
-const parser = parsers.BABEL_OLD;
 
 const noLeadingCommentError = 'dynamic imports require a leading comment with the webpack chunkname';
 const nonBlockCommentError = 'dynamic imports require a /* foo */ style comment, not a // foo comment';
@@ -25,7 +25,7 @@ const commentFormatError = `dynamic imports require a leading comment in the for
 const pickyCommentFormatError = `dynamic imports require a leading comment in the form /* webpackChunkName: ["']${pickyCommentFormat}["'],? */`;
 
 ruleTester.run('dynamic-import-chunkname', rule, {
-  valid: [
+  valid: parsers.all([].concat(
     {
       code: `dynamicImport(
         /* webpackChunkName: "someModule" */
@@ -53,10 +53,12 @@ ruleTester.run('dynamic-import-chunkname', rule, {
         'someModule'
       )`,
       options: pickyCommentOptions,
-      errors: [{
-        message: pickyCommentFormatError,
-        type: 'CallExpression',
-      }],
+      errors: [
+        {
+          message: pickyCommentFormatError,
+          type: 'CallExpression',
+        },
+      ],
     },
     {
       code: `import(
@@ -64,7 +66,7 @@ ruleTester.run('dynamic-import-chunkname', rule, {
         'test'
       )`,
       options,
-      parser,
+      features: ['dynamic import'],
     },
     {
       code: `import(
@@ -72,7 +74,7 @@ ruleTester.run('dynamic-import-chunkname', rule, {
         "test"
       )`,
       options,
-      parser,
+      features: ['dynamic import'],
     },
     {
       code: `import(
@@ -80,7 +82,7 @@ ruleTester.run('dynamic-import-chunkname', rule, {
         "test"
       )`,
       options,
-      parser,
+      features: ['dynamic import'],
     },
     {
       code: `import(
@@ -88,7 +90,7 @@ ruleTester.run('dynamic-import-chunkname', rule, {
         'test'
       )`,
       options,
-      parser,
+      features: ['dynamic import'],
     },
     {
       code: `import(
@@ -96,7 +98,7 @@ ruleTester.run('dynamic-import-chunkname', rule, {
         'test'
       )`,
       options,
-      parser,
+      features: ['dynamic import'],
     },
     {
       code: `import(
@@ -104,7 +106,7 @@ ruleTester.run('dynamic-import-chunkname', rule, {
         'test'
       )`,
       options,
-      parser,
+      features: ['dynamic import'],
     },
     {
       code: `import(
@@ -112,7 +114,7 @@ ruleTester.run('dynamic-import-chunkname', rule, {
         'test'
       )`,
       options,
-      parser,
+      features: ['dynamic import'],
     },
     {
       code: `import(
@@ -121,7 +123,7 @@ ruleTester.run('dynamic-import-chunkname', rule, {
         'test'
       )`,
       options,
-      parser,
+      features: ['dynamic import'],
     },
     {
       code: `import(
@@ -130,7 +132,7 @@ ruleTester.run('dynamic-import-chunkname', rule, {
         'test'
       )`,
       options,
-      parser,
+      features: ['dynamic import'],
     },
     {
       code: `import(
@@ -138,7 +140,7 @@ ruleTester.run('dynamic-import-chunkname', rule, {
         'someModule'
       )`,
       options,
-      parser,
+      features: ['dynamic import'],
     },
     {
       code: `import(
@@ -146,41 +148,45 @@ ruleTester.run('dynamic-import-chunkname', rule, {
         'someModule'
       )`,
       options: pickyCommentOptions,
-      parser,
-      errors: [{
-        message: pickyCommentFormatError,
-        type: 'CallExpression',
-      }],
+      features: ['dynamic import'],
+      errors: [
+        {
+          message: pickyCommentFormatError,
+          type: 'CallExpression',
+        },
+      ],
     },
-    ...SYNTAX_CASES,
-  ],
 
-  invalid: [
+    SYNTAX_CASES,
+  )),
+
+  invalid: parsers.all([].concat(
     {
       code: `import(
         // webpackChunkName: "someModule"
         'someModule'
       )`,
       options,
-      parser,
+      features: ['dynamic import'],
       output: `import(
         // webpackChunkName: "someModule"
         'someModule'
       )`,
-      errors: [{
-        message: nonBlockCommentError,
-        type: 'CallExpression',
-      }],
+      errors: [{ message: nonBlockCommentError }],
     },
     {
-      code: 'import(\'test\')',
+      code: `import('test')`,
       options,
-      parser,
-      output: 'import(\'test\')',
-      errors: [{
-        message: noLeadingCommentError,
-        type: 'CallExpression',
-      }],
+      features: ['dynamic import', 'no-default', 'no-ts-new', 'no-babel'],
+      output: `import('test')`,
+      errors: [{ message: nonBlockCommentError }],
+    },
+    {
+      code: `import('test')`,
+      options,
+      features: ['dynamic import', 'no-ts-old'],
+      output: `import('test')`,
+      errors: [{ message: noLeadingCommentError }],
     },
     {
       code: `import(
@@ -188,15 +194,12 @@ ruleTester.run('dynamic-import-chunkname', rule, {
         'someModule'
       )`,
       options,
-      parser,
+      features: ['dynamic import'],
       output: `import(
         /* webpackChunkName: someModule */
         'someModule'
       )`,
-      errors: [{
-        message: invalidSyntaxCommentError,
-        type: 'CallExpression',
-      }],
+      errors: [{ message: invalidSyntaxCommentError }],
     },
     {
       code: `import(
@@ -204,15 +207,12 @@ ruleTester.run('dynamic-import-chunkname', rule, {
         'someModule'
       )`,
       options,
-      parser,
+      features: ['dynamic import'],
       output: `import(
         /* webpackChunkName: "someModule' */
         'someModule'
       )`,
-      errors: [{
-        message: invalidSyntaxCommentError,
-        type: 'CallExpression',
-      }],
+      errors: [{ message: invalidSyntaxCommentError }],
     },
     {
       code: `import(
@@ -220,15 +220,14 @@ ruleTester.run('dynamic-import-chunkname', rule, {
         'someModule'
       )`,
       options,
-      parser,
+      features: ['dynamic import'],
       output: `import(
         /* webpackChunkName: 'someModule" */
         'someModule'
       )`,
-      errors: [{
-        message: invalidSyntaxCommentError,
-        type: 'CallExpression',
-      }],
+      errors: [
+        { message: invalidSyntaxCommentError },
+      ],
     },
     {
       code: `import(
@@ -236,15 +235,14 @@ ruleTester.run('dynamic-import-chunkname', rule, {
         'someModule'
       )`,
       options,
-      parser,
+      features: ['dynamic import'],
       output: `import(
         /* webpackChunkName "someModule" */
         'someModule'
       )`,
-      errors: [{
-        message: invalidSyntaxCommentError,
-        type: 'CallExpression',
-      }],
+      errors: [
+        { message: invalidSyntaxCommentError },
+      ],
     },
     {
       code: `import(
@@ -252,15 +250,14 @@ ruleTester.run('dynamic-import-chunkname', rule, {
         'someModule'
       )`,
       options,
-      parser,
+      features: ['dynamic import'],
       output: `import(
         /* webpackChunkName:"someModule" */
         'someModule'
       )`,
-      errors: [{
-        message: commentFormatError,
-        type: 'CallExpression',
-      }],
+      errors: [
+        { message: commentFormatError },
+      ],
     },
     {
       code: `import(
@@ -268,15 +265,14 @@ ruleTester.run('dynamic-import-chunkname', rule, {
         'someModule'
       )`,
       options,
-      parser,
+      features: ['dynamic import'],
       output: `import(
         /*webpackChunkName: "someModule"*/
         'someModule'
       )`,
-      errors: [{
-        message: noPaddingCommentError,
-        type: 'CallExpression',
-      }],
+      errors: [
+        { message: noPaddingCommentError },
+      ],
     },
     {
       code: `import(
@@ -284,15 +280,14 @@ ruleTester.run('dynamic-import-chunkname', rule, {
         'someModule'
       )`,
       options,
-      parser,
+      features: ['dynamic import'],
       output: `import(
         /* webpackChunkName  :  "someModule" */
         'someModule'
       )`,
-      errors: [{
-        message: commentFormatError,
-        type: 'CallExpression',
-      }],
+      errors: [
+        { message: commentFormatError },
+      ],
     },
     {
       code: `import(
@@ -300,15 +295,14 @@ ruleTester.run('dynamic-import-chunkname', rule, {
         'someModule'
       )`,
       options,
-      parser,
+      features: ['dynamic import'],
       output: `import(
         /* webpackChunkName: "someModule" ; */
         'someModule'
       )`,
-      errors: [{
-        message: invalidSyntaxCommentError,
-        type: 'CallExpression',
-      }],
+      errors: [
+        { message: invalidSyntaxCommentError },
+      ],
     },
     {
       code: `import(
@@ -316,15 +310,14 @@ ruleTester.run('dynamic-import-chunkname', rule, {
         'someModule'
       )`,
       options,
-      parser,
+      features: ['dynamic import'],
       output: `import(
         /* totally not webpackChunkName: "someModule" */
         'someModule'
       )`,
-      errors: [{
-        message: invalidSyntaxCommentError,
-        type: 'CallExpression',
-      }],
+      errors: [
+        { message: invalidSyntaxCommentError },
+      ],
     },
     {
       code: `import(
@@ -333,16 +326,15 @@ ruleTester.run('dynamic-import-chunkname', rule, {
         'someModule'
       )`,
       options,
-      parser,
+      features: ['dynamic import'],
       output: `import(
         /* webpackPrefetch: true */
         /* webpackChunk: "someModule" */
         'someModule'
       )`,
-      errors: [{
-        message: commentFormatError,
-        type: 'CallExpression',
-      }],
+      errors: [
+        { message: commentFormatError },
+      ],
     },
     {
       code: `import(
@@ -350,15 +342,12 @@ ruleTester.run('dynamic-import-chunkname', rule, {
         'someModule'
       )`,
       options,
-      parser,
+      features: ['dynamic import'],
       output: `import(
         /* webpackPrefetch: true, webpackChunk: "someModule" */
         'someModule'
       )`,
-      errors: [{
-        message: commentFormatError,
-        type: 'CallExpression',
-      }],
+      errors: [{ message: commentFormatError }],
     },
     {
       code: `import(
@@ -366,15 +355,12 @@ ruleTester.run('dynamic-import-chunkname', rule, {
         'someModule'
       )`,
       options: pickyCommentOptions,
-      parser,
+      features: ['dynamic import'],
       output: `import(
         /* webpackChunkName: "someModule123" */
         'someModule'
       )`,
-      errors: [{
-        message: pickyCommentFormatError,
-        type: 'CallExpression',
-      }],
+      errors: [{ message: pickyCommentFormatError }],
     },
     {
       code: `dynamicImport(
@@ -386,10 +372,7 @@ ruleTester.run('dynamic-import-chunkname', rule, {
         /* webpackChunkName "someModule" */
         'someModule'
       )`,
-      errors: [{
-        message: invalidSyntaxCommentError,
-        type: 'CallExpression',
-      }],
+      errors: [{ message: invalidSyntaxCommentError }],
     },
     {
       code: `definitelyNotStaticImport(
@@ -401,10 +384,7 @@ ruleTester.run('dynamic-import-chunkname', rule, {
         /* webpackChunkName "someModule" */
         'someModule'
       )`,
-      errors: [{
-        message: invalidSyntaxCommentError,
-        type: 'CallExpression',
-      }],
+      errors: [{ message: invalidSyntaxCommentError }],
     },
     {
       code: `dynamicImport(
@@ -416,19 +396,13 @@ ruleTester.run('dynamic-import-chunkname', rule, {
         // webpackChunkName: "someModule"
         'someModule'
       )`,
-      errors: [{
-        message: nonBlockCommentError,
-        type: 'CallExpression',
-      }],
+      errors: [{ message: nonBlockCommentError }],
     },
     {
       code: 'dynamicImport(\'test\')',
       options,
       output: 'dynamicImport(\'test\')',
-      errors: [{
-        message: noLeadingCommentError,
-        type: 'CallExpression',
-      }],
+      errors: [{ message: noLeadingCommentError }],
     },
     {
       code: `dynamicImport(
@@ -440,10 +414,7 @@ ruleTester.run('dynamic-import-chunkname', rule, {
         /* webpackChunkName: someModule */
         'someModule'
       )`,
-      errors: [{
-        message: invalidSyntaxCommentError,
-        type: 'CallExpression',
-      }],
+      errors: [{ message: invalidSyntaxCommentError }],
     },
     {
       code: `dynamicImport(
@@ -455,10 +426,7 @@ ruleTester.run('dynamic-import-chunkname', rule, {
         /* webpackChunkName "someModule" */
         'someModule'
       )`,
-      errors: [{
-        message: invalidSyntaxCommentError,
-        type: 'CallExpression',
-      }],
+      errors: [{ message: invalidSyntaxCommentError }],
     },
     {
       code: `dynamicImport(
@@ -470,10 +438,7 @@ ruleTester.run('dynamic-import-chunkname', rule, {
         /* webpackChunkName:"someModule" */
         'someModule'
       )`,
-      errors: [{
-        message: commentFormatError,
-        type: 'CallExpression',
-      }],
+      errors: [{ message: commentFormatError }],
     },
     {
       code: `dynamicImport(
@@ -485,17 +450,14 @@ ruleTester.run('dynamic-import-chunkname', rule, {
         /* webpackChunkName: "someModule123" */
         'someModule'
       )`,
-      errors: [{
-        message: pickyCommentFormatError,
-        type: 'CallExpression',
-      }],
+      errors: [{ message: pickyCommentFormatError }],
     },
-  ],
+  )),
 });
 
 context('TypeScript', () => {
   getTSParsers().forEach((typescriptParser) => {
-    const nodeType = typescriptParser === parsers.TS_OLD || (typescriptParser === parsers.TS_NEW && semver.satisfies(require('@typescript-eslint/parser/package.json').version, '^2'))
+    const nodeType = typescriptParser === p.TS_OLD || (typescriptParser === p.TS_NEW && semver.satisfies(require('@typescript-eslint/parser/package.json').version, '^2'))
       ? 'CallExpression'
       : 'ImportExpression';
 

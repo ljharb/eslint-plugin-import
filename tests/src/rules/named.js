@@ -1,18 +1,25 @@
-import { test, SYNTAX_CASES, getTSParsers, testFilePath, testVersion, parsers } from '../utils';
+import { test, SYNTAX_CASES, getTSParsers, testFilePath, testVersion } from '../utils';
+import parsers from '../parsers';
 import { RuleTester } from 'eslint';
+import semver from 'semver';
+
+import { version as tsParserOld } from 'typescript-eslint-parser/package.json';
+import { version as tsParserNew } from '@typescript-eslint/parser/package.json';
 
 import { CASE_SENSITIVE_FS } from 'eslint-module-utils/resolve';
-
 
 const ruleTester = new RuleTester();
 const rule = require('rules/named');
 
 function error(name, module, type = 'Identifier') {
-  return { message: name + ' not found in \'' + module + '\'', type };
+  return {
+    message: name + ' not found in \'' + module + '\'',
+    type,
+  };
 }
 
 ruleTester.run('named', rule, {
-  valid: [
+  valid: parsers.all([].concat(
     test({ code: 'import "./malformed.js"' }),
 
     test({ code: 'import { foo } from "./bar"' }),
@@ -28,17 +35,26 @@ ruleTester.run('named', rule, {
     test({ code: 'import {a, b, c} from "./re-export-common-star"' }),
     test({ code: 'import {RuleTester} from "./re-export-node_modules"' }),
 
-    test({ code: 'import { jsxFoo } from "./jsx/AnotherComponent"',
-      settings: { 'import/resolve': { 'extensions': ['.js', '.jsx'] } } }),
+    test({
+      code: 'import { jsxFoo } from "./jsx/AnotherComponent"',
+      settings: {
+        'import/resolve': {
+          'extensions': ['.js', '.jsx'],
+        },
+      },
+    }),
 
     // validate that eslint-disable-line silences this properly
-    test({ code: 'import {a, b, d} from "./common"; ' +
-                '// eslint-disable-line named' }),
+    test({ code: 'import {a, b, d} from "./common"; // eslint-disable-line named' }),
 
     test({ code: 'import { foo, bar } from "./re-export-names"' }),
 
-    test({ code: 'import { foo, bar } from "./common"',
-      settings: { 'import/ignore': ['common'] } }),
+    test({
+      code: 'import { foo, bar } from "./common"',
+      settings: {
+        'import/ignore': ['common'],
+      },
+    }),
 
     // ignore core modules by default
     test({ code: 'import { foo } from "crypto"' }),
@@ -54,11 +70,11 @@ ruleTester.run('named', rule, {
     // es7
     test({
       code: 'export bar, { foo } from "./bar"',
-      parser: parsers.BABEL_OLD,
+      features: ['no-default', 'no-babel-new', 'no-ts'],
     }),
     test({
       code: 'import { foo, bar } from "./named-trampoline"',
-      parser: parsers.BABEL_OLD,
+      features: ['no-ts-new'],
     }),
 
     // regression tests
@@ -73,43 +89,43 @@ ruleTester.run('named', rule, {
     // should ignore imported/exported flow types, even if they don’t exist
     test({
       code: 'import type { MissingType } from "./flowtypes"',
-      parser: parsers.BABEL_OLD,
+      features: ['flow'],
     }),
     test({
       code: 'import typeof { MissingType } from "./flowtypes"',
-      parser: parsers.BABEL_OLD,
+      features: ['flow'],
     }),
     test({
       code: 'import type { MyOpaqueType } from "./flowtypes"',
-      parser: parsers.BABEL_OLD,
+      features: ['flow'],
     }),
     test({
       code: 'import typeof { MyOpaqueType } from "./flowtypes"',
-      parser: parsers.BABEL_OLD,
+      features: ['flow'],
     }),
     test({
       code: 'import { type MyOpaqueType, MyClass } from "./flowtypes"',
-      parser: parsers.BABEL_OLD,
+      features: ['flow'],
     }),
     test({
       code: 'import { typeof MyOpaqueType, MyClass } from "./flowtypes"',
-      parser: parsers.BABEL_OLD,
+      features: ['flow'],
     }),
     test({
       code: 'import typeof MissingType from "./flowtypes"',
-      parser: parsers.BABEL_OLD,
+      features: ['flow'],
     }),
     test({
       code: 'import typeof * as MissingType from "./flowtypes"',
-      parser: parsers.BABEL_OLD,
+      features: ['flow'],
     }),
     test({
       code: 'export type { MissingType } from "./flowtypes"',
-      parser: parsers.BABEL_OLD,
+      features: ['flow'],
     }),
     test({
       code: 'export type { MyOpaqueType } from "./flowtypes"',
-      parser: parsers.BABEL_OLD,
+      features: ['flow'],
     }),
 
     // jsnext
@@ -139,6 +155,7 @@ ruleTester.run('named', rule, {
     test({ code: 'import {a, b, d} from "./common"' }),
     test({
       code: 'import { baz } from "./bar"',
+      features: ['no-ts-new'], // TODO: FIXME: remove 'no-ts-new'
       settings: { 'import/ignore': ['bar'] },
     }),
     test({
@@ -180,9 +197,9 @@ ruleTester.run('named', rule, {
       options: [{ commonjs: true }],
     }),
 
-    ...SYNTAX_CASES,
+    SYNTAX_CASES,
 
-    ...[].concat(testVersion('>= 6', () => ({
+    testVersion('>= 6', () => ({
       code: `import { ExtfieldModel, Extfield2Model } from './models';`,
       filename: testFilePath('./export-star/downstream.js'),
       parserOptions: {
@@ -196,88 +213,176 @@ ruleTester.run('named', rule, {
       options: [{ commonjs: true }],
     })),
 
-    testVersion('>=7.8.0', () => ({ code: 'import { something } from "./dynamic-import-in-commonjs"',
-      parserOptions: { ecmaVersion: 2021 } })),
+    testVersion('>=7.8.0', () => ({
+      code: 'import { something } from "./dynamic-import-in-commonjs"',
+      parserOptions: { ecmaVersion: 2021 },
+    })),
 
     // es2022: Arbitrary module namespace identifier names
-    testVersion('>= 8.7', () => ({
-      code: 'import { "foo" as foo } from "./bar"', parserOptions: { ecmaVersion: 2022 } })),
-    testVersion('>= 8.7', () => ({
-      code: 'import { "foo" as foo } from "./empty-module"', parserOptions: { ecmaVersion: 2022 } })),
-    ),
-  ],
+    test({
+      code: 'import { "foo" as foo } from "./bar"',
+      features: ['arbitrary imports'],
+    }),
+    test({
+      code: 'import { "foo" as foo } from "./empty-module"',
+      features: ['arbitrary imports'],
+    }),
 
-  invalid: [].concat(
-    test({ code: 'import { somethingElse } from "./test-module"',
-      errors: [ error('somethingElse', './test-module') ] }),
+    // export-all
+    test({
+      code: 'import { foo } from "./export-all"',
+    }),
 
-    test({ code: 'import { baz } from "./bar"',
-      errors: [error('baz', './bar')] }),
+    // #311: import of mismatched case
+    CASE_SENSITIVE_FS ? [] : test({
+      code: 'import { b } from "./Named-Exports"',
+    }),
+  )),
+
+  invalid: parsers.all([].concat(
+    test({
+      code: 'import { somethingElse } from "./test-module"',
+      features: [].concat(
+        semver.satisfies(tsParserNew, '< 4') ? 'no-ts-new' : [],
+        semver.satisfies(tsParserOld, '^20') ? 'no-ts-old' : [],
+      ),
+      errors: [error('somethingElse', './test-module')],
+    }),
+
+    test({
+      code: 'import { baz } from "./bar"',
+      features: [].concat(
+        semver.satisfies(tsParserNew, '< 4') ? 'no-ts-new' : [],
+        semver.satisfies(tsParserOld, '^20') ? 'no-ts-old' : [],
+      ),
+      errors: [error('baz', './bar')],
+    }),
 
     // test multiple
-    test({ code: 'import { baz, bop } from "./bar"',
-      errors: [error('baz', './bar'), error('bop', './bar')] }),
+    test({
+      code: 'import { baz, bop } from "./bar"',
+      features: [].concat(
+        semver.satisfies(tsParserNew, '< 4') ? 'no-ts-new' : [],
+        semver.satisfies(tsParserOld, '^20') ? 'no-ts-old' : [],
+      ),
+      errors: [
+        error('baz', './bar'),
+        error('bop', './bar'),
+      ],
+    }),
 
-    test({ code: 'import {a, b, c} from "./named-exports"',
-      errors: [error('c', './named-exports')] }),
+    test({
+      code: 'import {a, b, c} from "./named-exports"',
+      features: [].concat(
+        semver.satisfies(tsParserNew, '< 4') ? 'no-ts-new' : [],
+        semver.satisfies(tsParserOld, '^20') ? 'no-ts-old' : [],
+      ),
+      errors: [error('c', './named-exports')],
+    }),
 
-    test({ code: 'import { a } from "./default-export"',
-      errors: [error('a', './default-export')] }),
+    test({
+      code: 'import { a } from "./default-export"',
+      features: [].concat(
+        semver.satisfies(tsParserNew, '< 4') ? 'no-ts-new' : [],
+        semver.satisfies(tsParserOld, '^20') ? 'no-ts-old' : [],
+      ),
+      errors: [error('a', './default-export')],
+    }),
 
-    test({ code: 'import { ActionTypess } from "./qc"',
-      errors: [error('ActionTypess', './qc')] }),
+    test({
+      code: 'import { ActionTypess } from "./qc"',
+      features: [].concat(
+        semver.satisfies(tsParserNew, '< 4') ? 'no-ts-new' : [],
+        semver.satisfies(tsParserOld, '^20') ? 'no-ts-old' : [],
+      ),
+      errors: [error('ActionTypess', './qc')],
+    }),
 
-    test({ code: 'import {a, b, c, d, e} from "./re-export"',
-      errors: [error('e', './re-export')] }),
+    test({
+      code: 'import {a, b, c, d, e} from "./re-export"',
+      features: [].concat(
+        semver.satisfies(tsParserNew, '< 4') ? 'no-ts-new' : [],
+        semver.satisfies(tsParserOld, '^20') ? 'no-ts-old' : [],
+      ),
+      errors: [error('e', './re-export')],
+    }),
 
     test({
       code: 'import { a } from "./re-export-names"',
+      features: [].concat(
+        semver.satisfies(tsParserNew, '< 4') ? 'no-ts-new' : [],
+        semver.satisfies(tsParserOld, '^20') ? 'no-ts-old' : [],
+      ),
       errors: [error('a', './re-export-names')],
     }),
 
     // export tests
     test({
       code: 'export { bar } from "./bar"',
-      errors: ["bar not found in './bar'"],
+      features: [].concat(
+        semver.satisfies(tsParserNew, '< 4') ? 'no-ts-new' : [],
+        semver.satisfies(tsParserOld, '^20') ? 'no-ts-old' : [],
+      ),
+      errors: [{ message: "bar not found in './bar'" }],
     }),
 
     // es7
     test({
       code: 'export bar2, { bar } from "./bar"',
-      parser: parsers.BABEL_OLD,
-      errors: ["bar not found in './bar'"],
+      features: ['no-default', 'no-babel-new', 'no-ts'],
+      errors: [{ message: "bar not found in './bar'" }],
     }),
     test({
       code: 'import { foo, bar, baz } from "./named-trampoline"',
-      parser: parsers.BABEL_OLD,
-      errors: ["baz not found in './named-trampoline'"],
+      features: ['no-ts', 'no-default'],
+      errors: [{ message: "baz not found in './named-trampoline'" }],
     }),
     test({
       code: 'import { baz } from "./broken-trampoline"',
-      parser: parsers.BABEL_OLD,
-      errors: ['baz not found via broken-trampoline.js -> named-exports.js'],
+      features: ['no-ts', 'no-default'],
+      errors: [{ message: 'baz not found via broken-trampoline.js -> named-exports.js' }],
     }),
 
     test({
       code: 'const { baz } = require("./bar")',
+      features: [].concat(
+        semver.satisfies(tsParserNew, '< 4') ? 'no-ts-new' : [],
+        semver.satisfies(tsParserOld, '^20') ? 'no-ts-old' : [],
+      ),
       errors: [error('baz', './bar')],
       options: [{ commonjs: true }],
     }),
 
     test({
       code: 'let { baz } = require("./bar")',
+      features: [].concat(
+        semver.satisfies(tsParserNew, '< 4') ? 'no-ts-new' : [],
+        semver.satisfies(tsParserOld, '^20') ? 'no-ts-old' : [],
+      ),
       errors: [error('baz', './bar')],
       options: [{ commonjs: true }],
     }),
 
     test({
       code: 'const { baz: bar, bop } = require("./bar"), { a } = require("./re-export-names")',
-      errors: [error('baz', './bar'), error('bop', './bar'), error('a', './re-export-names')],
+      features: [].concat(
+        semver.satisfies(tsParserNew, '< 4') ? 'no-ts-new' : [],
+        semver.satisfies(tsParserOld, '^20') ? 'no-ts-old' : [],
+      ),
+      errors: [
+        error('baz', './bar'),
+        error('bop', './bar'),
+        error('a', './re-export-names'),
+      ],
       options: [{ commonjs: true }],
     }),
 
     test({
       code: 'const { default: defExport } = require("./named-exports")',
+      features: [].concat(
+        semver.satisfies(tsParserNew, '< 4') ? 'no-ts-new' : [],
+        semver.satisfies(tsParserOld, '^20') ? 'no-ts-old' : [],
+      ),
       errors: [error('default', './named-exports')],
       options: [{ commonjs: true }],
     }),
@@ -294,92 +399,104 @@ ruleTester.run('named', rule, {
 
     test({
       code: 'import  { type MyOpaqueType, MyMissingClass } from "./flowtypes"',
-      parser: parsers.BABEL_OLD,
-      errors: ["MyMissingClass not found in './flowtypes'"],
+      features: ['flow'],
+      errors: [{ message: "MyMissingClass not found in './flowtypes'" }],
     }),
 
     // jsnext
     test({
       code: '/*jsnext*/ import { createSnorlax } from "redux"',
+      features: [].concat(
+        semver.satisfies(tsParserNew, '< 4') ? 'no-ts-new' : [],
+        semver.satisfies(tsParserOld, '^20') ? 'no-ts-old' : [],
+      ),
       settings: { 'import/ignore': [] },
-      errors: ["createSnorlax not found in 'redux'"],
+      errors: [{ message: "createSnorlax not found in 'redux'" }],
     }),
     // should work without ignore
     test({
       code: '/*jsnext*/ import { createSnorlax } from "redux"',
-      errors: ["createSnorlax not found in 'redux'"],
+      features: [].concat(
+        semver.satisfies(tsParserNew, '< 4') ? 'no-ts-new' : [],
+        semver.satisfies(tsParserOld, '^20') ? 'no-ts-old' : [],
+      ),
+      errors: [{ message: "createSnorlax not found in 'redux'" }],
     }),
 
     // ignore is ignored if exports are found
     test({
       code: 'import { baz } from "es6-module"',
-      errors: ["baz not found in 'es6-module'"],
+      features: [].concat(
+        semver.satisfies(tsParserNew, '< 4') ? 'no-ts-new' : [],
+        semver.satisfies(tsParserOld, '^20') ? 'no-ts-old' : [],
+      ),
+      errors: [{ message: "baz not found in 'es6-module'" }],
     }),
 
     // issue #251
     test({
       code: 'import { foo, bar, bap } from "./re-export-default"',
-      errors: ["bap not found in './re-export-default'"],
+      features: [].concat(
+        semver.satisfies(tsParserNew, '< 4') ? 'no-ts-new' : [],
+        semver.satisfies(tsParserOld, '^20') ? 'no-ts-old' : [],
+      ),
+      errors: [{ message: "bap not found in './re-export-default'" }],
     }),
 
 
     // #328: * exports do not include default
     test({
       code: 'import { default as barDefault } from "./re-export"',
-      errors: [`default not found in './re-export'`],
+      features: [].concat(
+        semver.satisfies(tsParserNew, '< 4') ? 'no-ts-new' : [],
+        semver.satisfies(tsParserOld, '^20') ? 'no-ts-old' : [],
+      ),
+      errors: [{ message: `default not found in './re-export'` }],
     }),
 
     // es2022: Arbitrary module namespace identifier names
-    testVersion('>= 8.7', () => ({
-      code: 'import { "somethingElse" as somethingElse } from "./test-module"',
-      errors: [ error('somethingElse', './test-module', 'Literal') ],
-      parserOptions: { ecmaVersion: 2022 },
-    })),
-    testVersion('>= 8.7', () => ({
-      code: 'import { "baz" as baz, "bop" as bop } from "./bar"',
-      errors: [error('baz', './bar', 'Literal'), error('bop', './bar', 'Literal')],
-      parserOptions: { ecmaVersion: 2022 },
-    })),
-    testVersion('>= 8.7', () => ({
-      code: 'import { "default" as barDefault } from "./re-export"',
-      errors: [`default not found in './re-export'`],
-      parserOptions: { ecmaVersion: 2022 },
-    })),
-  ),
-});
-
-// #311: import of mismatched case
-if (!CASE_SENSITIVE_FS) {
-  ruleTester.run('named (path case-insensitivity)', rule, {
-    valid: [
-      test({
-        code: 'import { b } from "./Named-Exports"',
-      }),
-    ],
-    invalid: [
-      test({
-        code: 'import { foo } from "./Named-Exports"',
-        errors: [`foo not found in './Named-Exports'`],
-      }),
-    ],
-  });
-}
-
-// export-all
-ruleTester.run('named (export *)', rule, {
-  valid: [
     test({
-      code: 'import { foo } from "./export-all"',
+      code: 'import { "somethingElse" as somethingElse } from "./test-module"',
+      errors: [error('somethingElse', './test-module', 'Literal')],
+      features: ['arbitrary imports'],
     }),
-  ],
-  invalid: [
+
+    test({
+      code: 'import { "baz" as baz, "bop" as bop } from "./bar"',
+      errors: [
+        error('baz', './bar', 'Literal'),
+        error('bop', './bar', 'Literal'),
+      ],
+      features: ['arbitrary imports'],
+    }),
+
+    test({
+      code: 'import { "default" as barDefault } from "./re-export"',
+      errors: [{ message: `default not found in './re-export'` }],
+      features: ['arbitrary imports'],
+    }),
+
+    // export-all
     test({
       code: 'import { bar } from "./export-all"',
-      errors: [`bar not found in './export-all'`],
+      features: [].concat(
+        semver.satisfies(tsParserNew, '< 4') ? 'no-ts-new' : [],
+        semver.satisfies(tsParserOld, '^20') ? 'no-ts-old' : [],
+      ),
+      errors: [{ message: `bar not found in './export-all'` }],
     }),
-  ],
-});
 
+    // #311: import of mismatched case
+    CASE_SENSITIVE_FS ? [] : test({
+      code: 'import { foo } from "./Named-Exports"',
+      features: [].concat(
+        semver.satisfies(tsParserNew, '< 4') ? 'no-ts-new' : [],
+        semver.satisfies(tsParserOld, '^20') ? 'no-ts-old' : [],
+      ),
+      errors: [{ message: `foo not found in './Named-Exports'` }],
+    }),
+  )),
+});
 
 context('TypeScript', function () {
   getTSParsers().forEach((parser) => {
@@ -440,9 +557,9 @@ context('TypeScript', function () {
         }),
         test({
           code: `
-              import { MyNamespace } from "./${source}"
-              MyNamespace.NSModule.NSModuleFunction()
-            `,
+            import { MyNamespace } from "./${source}"
+            MyNamespace.NSModule.NSModuleFunction()
+          `,
           parser,
           settings,
         }),
@@ -453,19 +570,23 @@ context('TypeScript', function () {
           code: `import { MissingType } from "./${source}"`,
           parser,
           settings,
-          errors: [{
-            message: `MissingType not found in './${source}'`,
-            type: 'Identifier',
-          }],
+          errors: [
+            {
+              message: `MissingType not found in './${source}'`,
+              type: 'Identifier',
+            },
+          ],
         }),
         test({
           code: `import { NotExported } from "./${source}"`,
           parser,
           settings,
-          errors: [{
-            message: `NotExported not found in './${source}'`,
-            type: 'Identifier',
-          }],
+          errors: [
+            {
+              message: `NotExported not found in './${source}'`,
+              type: 'Identifier',
+            },
+          ],
         }),
       );
     });

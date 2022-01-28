@@ -1,4 +1,5 @@
 import { test } from '../utils';
+import parsers from '../parsers';
 
 import { RuleTester } from 'eslint';
 
@@ -10,7 +11,7 @@ const error = {
 };
 
 ruleTester.run('no-absolute-path', rule, {
-  valid: [
+  valid: parsers.all([].concat(
     test({ code: 'import _ from "lodash"' }),
     test({ code: 'import find from "lodash.find"' }),
     test({ code: 'import foo from "./foo"' }),
@@ -49,8 +50,9 @@ ruleTester.run('no-absolute-path', rule, {
       code: 'define(["./some/path"], function (f) { /* ... */ })',
       options: [{ amd: true }],
     }),
-  ],
-  invalid: [
+  )),
+
+  invalid: parsers.all([].concat(
     test({
       code: 'import f from "/foo"',
       errors: [error],
@@ -96,5 +98,5 @@ ruleTester.run('no-absolute-path', rule, {
       options: [{ amd: true }],
       errors: [error],
     }),
-  ],
+  )),
 });

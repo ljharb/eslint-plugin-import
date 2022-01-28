@@ -1,64 +1,72 @@
 import { RuleTester } from 'eslint';
 import rule from 'rules/extensions';
-import { getTSParsers, test, testFilePath, parsers } from '../utils';
+import { getTSParsers, test, testFilePath, parsers as p } from '../utils';
+import parsers from '../parsers';
 
 const ruleTester = new RuleTester();
 
 ruleTester.run('extensions', rule, {
-  valid: [
+  valid: parsers.all([].concat(
     test({ code: 'import a from "@/a"' }),
     test({ code: 'import a from "a"' }),
-    test({ code: 'import dot from "./file.with.dot"' }),
+    test({
+      code: 'import dot from "./file.with.dot"',
+      features: ['no-ts'], // TODO: FIXME: remove `no-ts`
+    }),
     test({
       code: 'import a from "a/index.js"',
-      options: [ 'always' ],
+      options: ['always'],
     }),
     test({
       code: 'import dot from "./file.with.dot.js"',
-      options: [ 'always' ],
+      options: ['always'],
     }),
     test({
-      code: [
-        'import a from "a"',
-        'import packageConfig from "./package.json"',
-      ].join('\n'),
-      options: [ { json: 'always', js: 'never' } ],
+      code: `
+        import a from "a"
+        import packageConfig from "./package.json"
+      `,
+      options: [{ json: 'always', js: 'never' }],
     }),
     test({
-      code: [
-        'import lib from "./bar"',
-        'import component from "./bar.jsx"',
-        'import data from "./bar.json"',
-      ].join('\n'),
-      options: [ 'never' ],
-      settings: { 'import/resolve': { 'extensions': [ '.js', '.jsx', '.json' ] } },
-    }),
-
-    test({
-      code: [
-        'import bar from "./bar"',
-        'import barjson from "./bar.json"',
-        'import barhbs from "./bar.hbs"',
-      ].join('\n'),
-      options: [ 'always', { js: 'never', jsx: 'never' } ],
-      settings: { 'import/resolve': { 'extensions': [ '.js', '.jsx', '.json', '.hbs' ] } },
+      code: `
+        import lib from "./bar"
+        import component from "./bar.jsx"
+        import data from "./bar.json"
+      `,
+      options: ['never'],
+      settings: { 'import/resolve': { 'extensions': ['.js', '.jsx', '.json'] } },
     }),
 
     test({
-      code: [
-        'import bar from "./bar.js"',
-        'import pack from "./package"',
-      ].join('\n'),
-      options: [ 'never', { js: 'always', json: 'never' } ],
-      settings: { 'import/resolve': { 'extensions': [ '.js', '.json' ] } },
+      code: `
+        import bar from "./bar"
+        import barjson from "./bar.json"
+        import barhbs from "./bar.hbs"
+      `,
+      features: ['no-ts'], // TODO: FIXME: enable for TS, probably by enabling JSON import
+      options: ['always', { js: 'never', jsx: 'never' }],
+      settings: {
+        'import/resolve': { 'extensions': ['.js', '.jsx', '.json', '.hbs'] },
+      },
+    }),
+
+    test({
+      code: `
+        import bar from "./bar.js"
+        import pack from "./package"
+      `,
+      features: ['no-ts'], // TODO: FIXME: enable for TS
+      options: ['never', { js: 'always', json: 'never' }],
+      settings: { 'import/resolve': { 'extensions': ['.js', '.json'] } },
     }),
 
     // unresolved (#271/#295)
     test({ code: 'import path from "path"' }),
-    test({ code: 'import path from "path"', options: [ 'never' ] }),
-    test({ code: 'import path from "path"', options: [ 'always' ] }),
-    test({ code: 'import thing from "./fake-file.js"', options: [ 'always' ] }),
-    test({ code: 'import thing from "non-package"', options: [ 'never' ] }),
+    test({ code: 'import path from "path"', options: ['never'] }),
+    test({ code: 'import path from "path"', options: ['always'] }),
+    test({ code: 'import thing from "./fake-file.js"', options: ['always'] }),
+    test({ code: 'import thing from "non-package"', options: ['never'] }),
 
     test({
       code: `
@@ -67,7 +75,7 @@ ruleTester.run('extensions', rule, {
         import Component from './Component.jsx'
         import express from 'express'
       `,
-      options: [ 'ignorePackages' ],
+      options: ['ignorePackages'],
     }),
 
     test({
@@ -77,7 +85,7 @@ ruleTester.run('extensions', rule, {
         import Component from './Component.jsx'
         import express from 'express'
       `,
-      options: [ 'always', { ignorePackages: true } ],
+      options: ['always', { ignorePackages: true }],
     }),
 
     test({
@@ -87,16 +95,16 @@ ruleTester.run('extensions', rule, {
         import Component from './Component'
         import express from 'express'
       `,
-      options: [ 'never', { ignorePackages: true } ],
+      options: ['never', { ignorePackages: true }],
     }),
 
     test({
       code: 'import exceljs from "exceljs"',
-      options: [ 'always', { js: 'never', jsx: 'never' } ],
+      options: ['always', { js: 'never', jsx: 'never' }],
       filename: testFilePath('./internal-modules/plugins/plugin.js'),
       settings: {
         'import/resolver': {
-          'node': { 'extensions': [ '.js', '.jsx', '.json' ] },
+          'node': { 'extensions': ['.js', '.jsx', '.json'] },
           'webpack': { 'config': 'webpack.empty.config.js' },
         },
       },
@@ -104,62 +112,64 @@ ruleTester.run('extensions', rule, {
 
     // export (#964)
     test({
-      code: [
-        'export { foo } from "./foo.js"',
-        'let bar; export { bar }',
-      ].join('\n'),
-      options: [ 'always' ],
+      code: `
+        export { foo } from "./foo.js"
+        let bar; export { bar }
+      `,
+      options: ['always'],
     }),
     test({
-      code: [
-        'export { foo } from "./foo"',
-        'let bar; export { bar }',
-      ].join('\n'),
-      options: [ 'never' ],
+      code: `
+        export { foo } from "./foo"
+        let bar; export { bar }
+      `,
+      options: ['never'],
     }),
 
     // Root packages should be ignored and they are names not files
     test({
-      code: [
-        'import lib from "pkg.js"',
-        'import lib2 from "pgk/package"',
-        'import lib3 from "@name/pkg.js"',
-      ].join('\n'),
-      options: [ 'never' ],
+      code: `
+        import lib from "pkg.js"
+        import lib2 from "pgk/package"
+        import lib3 from "@name/pkg.js"
+      `,
+      options: ['never'],
     }),
 
     // Query strings.
     test({
       code: 'import bare from "./foo?a=True.ext"',
-      options: [ 'never' ],
+      options: ['never'],
     }),
     test({
       code: 'import bare from "./foo.js?a=True"',
-      options: [ 'always' ],
+      options: ['always'],
     }),
 
     test({
-      code: [
-        'import lib from "pkg"',
-        'import lib2 from "pgk/package.js"',
-        'import lib3 from "@name/pkg"',
-      ].join('\n'),
-      options: [ 'always' ],
+      code: `
+        import lib from "pkg"
+        import lib2 from "pgk/package.js"
+        import lib3 from "@name/pkg"
+      `,
+      options: ['always'],
     }),
-  ],
+  )),
 
-  invalid: [
+  invalid: parsers.all([].concat(
     test({
       code: 'import a from "a/index.js"',
-      errors: [ {
+      features: ['no-ts'], // TODO: FIXME: remove `no-ts`
+      errors: [{
         message: 'Unexpected use of file extension "js" for "a/index.js"',
         line: 1,
         column: 15,
-      } ],
+      }],
     }),
     test({
       code: 'import dot from "./file.with.dot"',
-      options: [ 'always' ],
+      features: ['no-ts'], // TODO: FIXME: remove `no-ts`
+      options: ['always'],
       errors: [
         {
           message: 'Missing file extension "js" for "./file.with.dot"',
@@ -169,12 +179,13 @@ ruleTester.run('extensions', rule, {
       ],
     }),
     test({
-      code: [
-        'import a from "a/index.js"',
-        'import packageConfig from "./package"',
-      ].join('\n'),
-      options: [ { json: 'always', js: 'never' } ],
-      settings: { 'import/resolve': { 'extensions': [ '.js', '.json' ] } },
+      code: `
+        import a from "a/index.js"
+        import packageConfig from "./package"
+      `,
+      features: ['no-default', 'no-ts', 'no-babel-old'], // TODO: FIXME: remove `no-ts`, `no-default`, `no-babel-old`
+      options: [{ json: 'always', js: 'never' }],
+      settings: { 'import/resolve': { 'extensions': ['.js', '.json'] } },
       errors: [
         {
           message: 'Unexpected use of file extension "js" for "a/index.js"',
@@ -189,13 +200,14 @@ ruleTester.run('extensions', rule, {
       ],
     }),
     test({
-      code: [
-        'import lib from "./bar.js"',
-        'import component from "./bar.jsx"',
-        'import data from "./bar.json"',
-      ].join('\n'),
-      options: [ 'never' ],
-      settings: { 'import/resolve': { 'extensions': [ '.js', '.jsx', '.json' ] } },
+      code: `
+        import lib from "./bar.js"
+        import component from "./bar.jsx"
+        import data from "./bar.json"
+      `,
+      features: ['no-default', 'no-ts', 'no-babel-old'], // TODO: FIXME: remove `no-ts`, `no-default`, `no-babel-old`
+      options: ['never'],
+      settings: { 'import/resolve': { 'extensions': ['.js', '.jsx', '.json'] } },
       errors: [
         {
           message: 'Unexpected use of file extension "js" for "./bar.js"',
@@ -205,13 +217,14 @@ ruleTester.run('extensions', rule, {
       ],
     }),
     test({
-      code: [
-        'import lib from "./bar.js"',
-        'import component from "./bar.jsx"',
-        'import data from "./bar.json"',
-      ].join('\n'),
-      options: [ { json: 'always', js: 'never', jsx: 'never' } ],
-      settings: { 'import/resolve': { 'extensions': [ '.js', '.jsx', '.json' ] } },
+      code: `
+        import lib from "./bar.js"
+        import component from "./bar.jsx"
+        import data from "./bar.json"
+      `,
+      features: ['no-default', 'no-ts', 'no-babel-old'], // TODO: FIXME: remove `no-ts`, `no-default`, `no-babel-old`
+      options: [{ json: 'always', js: 'never', jsx: 'never' }],
+      settings: { 'import/resolve': { 'extensions': ['.js', '.jsx', '.json'] } },
       errors: [
         {
           message: 'Unexpected use of file extension "js" for "./bar.js"',
@@ -222,12 +235,13 @@ ruleTester.run('extensions', rule, {
     }),
     // extension resolve order (#583/#965)
     test({
-      code: [
-        'import component from "./bar.jsx"',
-        'import data from "./bar.json"',
-      ].join('\n'),
-      options: [ { json: 'always', js: 'never', jsx: 'never' } ],
-      settings: { 'import/resolve': { 'extensions': [ '.jsx', '.json', '.js' ] } },
+      code: `
+        import component from "./bar.jsx"
+        import data from "./bar.json"
+      `,
+      features: ['no-default', 'no-ts', 'no-babel-old'], // TODO: FIXME: remove `no-ts`, `no-default`, `no-babel-old`
+      options: [{ json: 'always', js: 'never', jsx: 'never' }],
+      settings: { 'import/resolve': { 'extensions': ['.jsx', '.json', '.js'] } },
       errors: [
         {
           message: 'Unexpected use of file extension "jsx" for "./bar.jsx"',
@@ -238,6 +252,7 @@ ruleTester.run('extensions', rule, {
     }),
     test({
       code: 'import "./bar.coffee"',
+      features: ['no-ts'], // TODO: FIXME: remove `no-ts`
       errors: [
         {
           message: 'Unexpected use of file extension "coffee" for "./bar.coffee"',
@@ -250,13 +265,14 @@ ruleTester.run('extensions', rule, {
     }),
 
     test({
-      code: [
-        'import barjs from "./bar.js"',
-        'import barjson from "./bar.json"',
-        'import barnone from "./bar"',
-      ].join('\n'),
-      options: [ 'always', { json: 'always', js: 'never', jsx: 'never' } ],
-      settings: { 'import/resolve': { 'extensions': [ '.js', '.jsx', '.json' ] } },
+      code: `
+        import barjs from "./bar.js"
+        import barjson from "./bar.json"
+        import barnone from "./bar"
+      `,
+      features: ['no-default', 'no-ts', 'no-babel-old'], // TODO: FIXME: remove `no-ts`, `no-default`, `no-babel-old`
+      options: ['always', { json: 'always', js: 'never', jsx: 'never' }],
+      settings: { 'import/resolve': { 'extensions': ['.js', '.jsx', '.json'] } },
       errors: [
         {
           message: 'Unexpected use of file extension "js" for "./bar.js"',
@@ -267,13 +283,14 @@ ruleTester.run('extensions', rule, {
     }),
 
     test({
-      code: [
-        'import barjs from "./bar.js"',
-        'import barjson from "./bar.json"',
-        'import barnone from "./bar"',
-      ].join('\n'),
-      options: [ 'never', { json: 'always', js: 'never', jsx: 'never' } ],
-      settings: { 'import/resolve': { 'extensions': [ '.js', '.jsx', '.json' ] } },
+      code: `
+        import barjs from "./bar.js"
+        import barjson from "./bar.json"
+        import barnone from "./bar"
+      `,
+      features: ['no-default', 'no-ts', 'no-babel-old'], // TODO: FIXME: remove `no-ts`, `no-default`, `no-babel-old`
+      options: ['never', { json: 'always', js: 'never', jsx: 'never' }],
+      settings: { 'import/resolve': { 'extensions': ['.js', '.jsx', '.json'] } },
       errors: [
         {
           message: 'Unexpected use of file extension "js" for "./bar.js"',
@@ -286,7 +303,7 @@ ruleTester.run('extensions', rule, {
     // unresolved (#271/#295)
     test({
       code: 'import thing from "./fake-file.js"',
-      options: [ 'never' ],
+      options: ['never'],
       errors: [
         {
           message: 'Unexpected use of file extension "js" for "./fake-file.js"',
@@ -297,7 +314,7 @@ ruleTester.run('extensions', rule, {
     }),
     test({
       code: 'import thing from "non-package/test"',
-      options: [ 'always' ],
+      options: ['always'],
       errors: [
         {
           message: 'Missing file extension for "non-package/test"',
@@ -309,7 +326,7 @@ ruleTester.run('extensions', rule, {
 
     test({
       code: 'import thing from "@name/pkg/test"',
-      options: [ 'always' ],
+      options: ['always'],
       errors: [
         {
           message: 'Missing file extension for "@name/pkg/test"',
@@ -321,7 +338,7 @@ ruleTester.run('extensions', rule, {
 
     test({
       code: 'import thing from "@name/pkg/test.js"',
-      options: [ 'never' ],
+      options: ['never'],
       errors: [
         {
           message: 'Unexpected use of file extension "js" for "@name/pkg/test.js"',
@@ -342,7 +359,7 @@ ruleTester.run('extensions', rule, {
         import chart from '@/configs/chart'
         import express from 'express'
       `,
-      options: [ 'always', { ignorePackages: true } ],
+      options: ['always', { ignorePackages: true }],
       errors: [
         {
           message: 'Missing file extension for "./Component"',
@@ -367,7 +384,7 @@ ruleTester.run('extensions', rule, {
         import chart from '@/configs/chart'
         import express from 'express'
       `,
-      options: [ 'ignorePackages' ],
+      options: ['ignorePackages'],
       errors: [
         {
           message: 'Missing file extension for "./Component"',
@@ -400,7 +417,7 @@ ruleTester.run('extensions', rule, {
           column: 31,
         },
       ],
-      options: [ 'never', { ignorePackages: true } ],
+      options: ['never', { ignorePackages: true }],
     }),
 
     test({
@@ -416,16 +433,17 @@ ruleTester.run('extensions', rule, {
           column: 31,
         },
       ],
-      options: [ 'always', { pattern: { jsx: 'never' } } ],
+      options: ['always', { pattern: { jsx: 'never' } }],
     }),
 
     // export (#964)
     test({
-      code: [
-        'export { foo } from "./foo"',
-        'let bar; export { bar }',
-      ].join('\n'),
-      options: [ 'always' ],
+      code: `
+        export { foo } from "./foo"
+        let bar; export { bar }
+      `,
+      features: ['no-default', 'no-ts', 'no-babel-old'], // TODO: FIXME: remove `no-ts`, `no-default`, `no-babel-old`
+      options: ['always'],
       errors: [
         {
           message: 'Missing file extension for "./foo"',
@@ -435,11 +453,12 @@ ruleTester.run('extensions', rule, {
       ],
     }),
     test({
-      code: [
-        'export { foo } from "./foo.js"',
-        'let bar; export { bar }',
-      ].join('\n'),
-      options: [ 'never' ],
+      code: `
+        export { foo } from "./foo.js"
+        let bar; export { bar }
+      `,
+      features: ['no-default', 'no-ts', 'no-babel-old'], // TODO: FIXME: remove `no-ts`, `no-default`, `no-babel-old`
+      options: ['never'],
       errors: [
         {
           message: 'Unexpected use of file extension "js" for "./foo.js"',
@@ -452,7 +471,7 @@ ruleTester.run('extensions', rule, {
     // Query strings.
     test({
       code: 'import withExtension from "./foo.js?a=True"',
-      options: [ 'never' ],
+      options: ['never'],
       errors: [
         {
           message: 'Unexpected use of file extension "js" for "./foo.js?a=True"',
@@ -463,7 +482,7 @@ ruleTester.run('extensions', rule, {
     }),
     test({
       code: 'import withoutExtension from "./foo?a=True.ext"',
-      options: [ 'always' ],
+      options: ['always'],
       errors: [
         {
           message: 'Missing file extension for "./foo?a=True.ext"',
@@ -474,11 +493,12 @@ ruleTester.run('extensions', rule, {
     }),
     // require (#1230)
     test({
-      code: [
-        'const { foo } = require("./foo")',
-        'export { foo }',
-      ].join('\n'),
-      options: [ 'always' ],
+      code: `
+        const { foo } = require("./foo")
+        export { foo }
+      `,
+      features: ['no-default', 'no-ts', 'no-babel-old'], // TODO: FIXME: remove `no-ts`, `no-default`, `no-babel-old`
+      options: ['always'],
       errors: [
         {
           message: 'Missing file extension for "./foo"',
@@ -488,11 +508,12 @@ ruleTester.run('extensions', rule, {
       ],
     }),
     test({
-      code: [
-        'const { foo } = require("./foo.js")',
-        'export { foo }',
-      ].join('\n'),
-      options: [ 'never' ],
+      code: `
+        const { foo } = require("./foo.js")
+        export { foo }
+      `,
+      features: ['no-default', 'no-ts', 'no-babel-old'], // TODO: FIXME: remove `no-ts`, `no-default`, `no-babel-old`
+      options: ['never'],
       errors: [
         {
           message: 'Unexpected use of file extension "js" for "./foo.js"',
@@ -505,7 +526,7 @@ ruleTester.run('extensions', rule, {
     // export { } from
     test({
       code: 'export { foo } from "./foo"',
-      options: [ 'always' ],
+      options: ['always'],
       errors: [
         {
           message: 'Missing file extension for "./foo"',
@@ -533,7 +554,7 @@ ruleTester.run('extensions', rule, {
     }),
     test({
       code: 'export { foo } from "./foo.js"',
-      options: [ 'never' ],
+      options: ['never'],
       errors: [
         {
           message: 'Unexpected use of file extension "js" for "./foo.js"',
@@ -546,7 +567,7 @@ ruleTester.run('extensions', rule, {
     // export * from
     test({
       code: 'export * from "./foo"',
-      options: [ 'always' ],
+      options: ['always'],
       errors: [
         {
           message: 'Missing file extension for "./foo"',
@@ -557,7 +578,7 @@ ruleTester.run('extensions', rule, {
     }),
     test({
       code: 'export * from "./foo.js"',
-      options: [ 'never' ],
+      options: ['never'],
       errors: [
         {
           message: 'Unexpected use of file extension "js" for "./foo.js"',
@@ -595,13 +616,13 @@ ruleTester.run('extensions', rule, {
         },
       ],
     }),
-  ],
+  )),
 });
 
 describe('TypeScript', () => {
   getTSParsers()
     // Type-only imports were added in TypeScript ESTree 2.23.0
-    .filter((parser) => parser !== parsers.TS_OLD)
+    .filter((parser) => parser !== p.TS_OLD)
     .forEach((parser) => {
       ruleTester.run(`${parser}: extensions ignore type-only`, rule, {
         valid: [

@@ -1,4 +1,5 @@
-import { parsers, test, testVersion } from '../utils';
+import { test, testVersion } from '../utils';
+import parsers from '../parsers';
 
 import { RuleTester } from 'eslint';
 
@@ -6,7 +7,7 @@ const ruleTester = new RuleTester();
 const rule = require('rules/no-default-export');
 
 ruleTester.run('no-default-export', rule, {
-  valid: [
+  valid: parsers.all([
     test({
       code: `
         export const foo = 'foo';
@@ -58,7 +59,6 @@ ruleTester.run('no-default-export', rule, {
     }),
     test({
       code: 'export { a, b } from "foo.js"',
-      parser: parsers.BABEL_OLD,
     }),
 
     // no exports at all
@@ -74,18 +74,18 @@ ruleTester.run('no-default-export', rule, {
 
     test({
       code: `export type UserId = number;`,
-      parser: parsers.BABEL_OLD,
+      features: ['types'],
     }),
     test({
       code: 'export foo from "foo.js"',
-      parser: parsers.BABEL_OLD,
+      features: ['no-default', 'no-ts-new'],
     }),
     test({
       code: `export Memory, { MemoryValue } from './Memory'`,
-      parser: parsers.BABEL_OLD,
+      features: ['no-default', 'no-ts-new'],
     }),
-  ],
-  invalid: [].concat(
+  ]),
+  invalid: parsers.all([].concat(
     testVersion('> 2', () => ({
       code: 'export default function bar() {};',
       errors: [
@@ -154,7 +154,7 @@ ruleTester.run('no-default-export', rule, {
     }),
     test({
       code: 'export default from "foo.js"',
-      parser: parsers.BABEL_OLD,
+      features: ['no-default', 'no-ts-new'],
       errors: [
         {
           type: 'ExportNamedDeclaration',
@@ -163,15 +163,15 @@ ruleTester.run('no-default-export', rule, {
       ],
     }),
     // es2022: Arbitrary module namespae identifier names
-    testVersion('>= 8.7', () => ({
+    test({
       code: 'let foo; export { foo as "default" }',
+      features: ['arbitrary imports'],
       errors: [
         {
           type: 'ExportNamedDeclaration',
           message: 'Do not alias `foo` as `default`. Just export `foo` itself instead.',
         },
       ],
-      parserOptions: { ecmaVersion: 2022 },
-    })),
-  ),
+    }),
+  )),
 });

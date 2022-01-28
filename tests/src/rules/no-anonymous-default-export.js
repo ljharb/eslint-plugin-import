@@ -1,4 +1,5 @@
-import { test, testVersion, SYNTAX_CASES } from '../utils';
+import { test, SYNTAX_CASES } from '../utils';
+import parsers from '../parsers';
 
 import { RuleTester } from 'eslint';
 
@@ -6,7 +7,7 @@ const ruleTester = new RuleTester();
 const rule = require('rules/no-anonymous-default-export');
 
 ruleTester.run('no-anonymous-default-export', rule, {
-  valid: [].concat(
+  valid: parsers.all([].concat(
     // Exports with identifiers are valid
     test({ code: 'const foo = 123\nexport default foo' }),
     test({ code: 'export default function foo() {}' }),
@@ -32,29 +33,61 @@ ruleTester.run('no-anonymous-default-export', rule, {
     test({ code: 'const foo = 123\nexport { foo }' }),
     test({ code: 'const foo = 123\nexport { foo as default }' }),
     // es2022: Arbitrary module namespace identifier names
-    testVersion('>= 8.7', () => ({
+    test({
       code: 'const foo = 123\nexport { foo as "default" }',
-      parserOptions: { ecmaVersion: 2022 },
-    })),
+      features: ['arbitrary imports'],
+    }),
 
     // Allow call expressions by default for backwards compatibility
     test({ code: 'export default foo(bar)' }),
 
-    ...SYNTAX_CASES,
-  ),
+    SYNTAX_CASES,
+  )),
 
-  invalid: [
-    test({ code: 'export default []', errors: [{ message: 'Assign array to a variable before exporting as module default' }] }),
-    test({ code: 'export default () => {}', errors: [{ message: 'Assign arrow function to a variable before exporting as module default' }] }),
-    test({ code: 'export default class {}', errors: [{ message: 'Unexpected default export of anonymous class' }] }),
-    test({ code: 'export default function() {}', errors: [{ message: 'Unexpected default export of anonymous function' }] }),
-    test({ code: 'export default 123', errors: [{ message: 'Assign literal to a variable before exporting as module default' }] }),
-    test({ code: 'export default \'foo\'', errors: [{ message: 'Assign literal to a variable before exporting as module default' }] }),
-    test({ code: 'export default `foo`', errors: [{ message: 'Assign literal to a variable before exporting as module default' }] }),
-    test({ code: 'export default {}', errors: [{ message: 'Assign object to a variable before exporting as module default' }] }),
-    test({ code: 'export default foo(bar)', options: [{ allowCallExpression: false }], errors: [{ message: 'Assign call result to a variable before exporting as module default' }] }),
+  invalid: parsers.all([].concat(
+    test({
+      code: 'export default []',
+      errors: [{ message: 'Assign array to a variable before exporting as module default' }],
+    }),
+    test({
+      code: 'export default () => {}',
+      errors: [{ message: 'Assign arrow function to a variable before exporting as module default' }],
+    }),
+    test({
+      code: 'export default class {}',
+      errors: [{ message: 'Unexpected default export of anonymous class' }],
+    }),
+    test({
+      code: 'export default function() {}',
+      errors: [{ message: 'Unexpected default export of anonymous function' }],
+    }),
+    test({
+      code: 'export default 123',
+      errors: [{ message: 'Assign literal to a variable before exporting as module default' }],
+    }),
+    test({
+      code: 'export default \'foo\'',
+      errors: [{ message: 'Assign literal to a variable before exporting as module default' }],
+    }),
+    test({
+      code: 'export default `foo`',
+      errors: [{ message: 'Assign literal to a variable before exporting as module default' }],
+    }),
+    test({
+      code: 'export default {}',
+      errors: [{ message: 'Assign object to a variable before exporting as module default' }],
+    }),
+    test({
+      code: 'export default foo(bar)',
+      options: [{ allowCallExpression: false }],
+      errors: [{ message: 'Assign call result to a variable before exporting as module default' }],
+    }),
 
     // Test failure with non-covering exception
-    test({ code: 'export default 123', options: [{ allowObject: true }], errors: [{ message: 'Assign literal to a variable before exporting as module default' }] }),
-  ],
+    test({ 
+      code: 'export default 123',
+      options: [{ allowObject: true }],
+      errors: [{ message: 'Assign literal to a variable before exporting as module default' }], 
+    }),
+  )),
 });

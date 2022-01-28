@@ -1,4 +1,5 @@
-import { test, SYNTAX_CASES, getTSParsers } from '../utils';
+import { test, SYNTAX_CASES } from '../utils';
+import parsers from '../parsers';
 
 import { RuleTester } from 'eslint';
 
@@ -6,7 +7,7 @@ const ruleTester = new RuleTester();
 const rule = require('rules/no-deprecated');
 
 ruleTester.run('no-deprecated', rule, {
-  valid: [
+  valid: parsers.all([].concat(
     test({ code: "import { x } from './fake' " }),
     test({ code: "import bar from './bar'" }),
 
@@ -38,13 +39,25 @@ ruleTester.run('no-deprecated', rule, {
       code: "import { deepDep } from './deep-deprecated'; function x(deepDep) { console.log(deepDep.MY_TERRIBLE_ACTION) }",
     }),
 
+    SYNTAX_CASES,
 
-    ...SYNTAX_CASES,
-  ],
-  invalid: [
+    test({
+      code: "function x(deepDep) { console.log(deepDep.MY_TERRIBLE_ACTION) } import { deepDep } from './deep-deprecated'",
+    }),
 
+    test({
+      code: `import * as hasDeprecated from './ts-deprecated.ts'`,
+      features: ['ts'],
+    }),
+  )),
+
+  invalid: parsers.all([].concat(
     // reports on parse errors even without specifiers
-    test({ code: "import './malformed.js'", errors: 1 }),
+    test({
+      code: "import './malformed.js'",
+      features: ['no-ts-new'],
+      errors: 1,
+    }),
 
     test({
       code: "import { fn } from './deprecated'",
@@ -173,19 +186,6 @@ ruleTester.run('no-deprecated', rule, {
         { type: 'Identifier', message: 'Deprecated: please stop sending/handling this action type.' },
       ],
     }),
-  ],
-});
-
-ruleTester.run('no-deprecated: hoisting', rule, {
-  valid: [
-
-    test({
-      code: "function x(deepDep) { console.log(deepDep.MY_TERRIBLE_ACTION) } import { deepDep } from './deep-deprecated'",
-    }),
-
-  ],
-
-  invalid: [
 
     test({
       code: "console.log(MY_TERRIBLE_ACTION); import { MY_TERRIBLE_ACTION } from './deprecated'",
@@ -195,34 +195,13 @@ ruleTester.run('no-deprecated: hoisting', rule, {
       ],
     }),
 
-  ],
-});
-
-describe('TypeScript', function () {
-  getTSParsers().forEach((parser) => {
-    const parserConfig = {
-      parser,
-      settings: {
-        'import/parsers': { [parser]: ['.ts'] },
-        'import/resolver': { 'eslint-import-resolver-typescript': true },
-      },
-    };
-
-    ruleTester.run(parser, rule, {
-      valid: [
-        test(Object.assign({
-          code: 'import * as hasDeprecated from \'./ts-deprecated.ts\'',
-        }, parserConfig)),
+    test({
+      code: `import { foo } from './ts-deprecated.ts'; console.log(foo())`,
+      features: ['ts'],
+      errors: [
+        { type: 'ImportSpecifier', message: 'Deprecated: don\'t use this!' },
+        { type: 'Identifier', message: 'Deprecated: don\'t use this!' },
       ],
-      invalid: [
-        test(Object.assign({
-          code: 'import { foo } from \'./ts-deprecated.ts\'; console.log(foo())',
-          errors: [
-            { type: 'ImportSpecifier', message: 'Deprecated: don\'t use this!' },
-            { type: 'Identifier', message: 'Deprecated: don\'t use this!' },
-          ] },
-        parserConfig)),
-      ],
-    });
-  });
+    }),
+  )),
 });

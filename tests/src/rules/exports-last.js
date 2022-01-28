@@ -1,4 +1,5 @@
 import { test } from '../utils';
+import parsers from '../parsers';
 
 import { RuleTester } from 'eslint';
 import rule from 'rules/exports-last';
@@ -11,7 +12,7 @@ const error = type => ({
 });
 
 ruleTester.run('exports-last', rule, {
-  valid: [
+  valid: parsers.all([].concat(
     // Empty file
     test({
       code: '// comment',
@@ -77,8 +78,8 @@ ruleTester.run('exports-last', rule, {
         export * from './foo'
       `,
     }),
-  ],
-  invalid: [
+  )),
+  invalid: parsers.all([].concat(
     // Default export before variable declaration
     test({
       code: `
@@ -119,5 +120,5 @@ ruleTester.run('exports-last', rule, {
         error('ExportNamedDeclaration'),
       ],
     }),
-  ],
+  )),
 });
