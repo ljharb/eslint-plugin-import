@@ -12,6 +12,10 @@ function opts(file, config, packageFilter) {
   return Object.assign({ // more closely matches Node (#333)
     // plus 'mjs' for native modules! (#939)
     extensions: ['.mjs', '.js', '.json', '.node'],
+    // Use the consumer's engines.node to determine exports resolution behavior.
+    // Falls back to traditional resolution when engines.node is absent.
+    // Set engines: false in resolver config to opt out.
+    engines: true,
   }, config, {
     // path.resolve will handle paths relative to CWD
     basedir: path.dirname(path.resolve(file)),
