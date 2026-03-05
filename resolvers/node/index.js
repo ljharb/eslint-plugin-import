@@ -55,7 +55,7 @@ exports.resolve = function (source, file, config) {
   }
 
   try {
-    const cachedFilter = function (pkg, dir) { return packageFilter(pkg, dir, config); };
+    const cachedFilter = function (pkg, _pkgFile, dir) { return packageFilter(pkg, dir, config); };
     resolvedPath = resolve(source, opts(file, config, cachedFilter));
     log('Resolved to:', resolvedPath);
     return { found: true, path: resolvedPath };
